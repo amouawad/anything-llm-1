@@ -9,6 +9,7 @@ const TRANSLATIONS = {
     save: "Save changes",
     previous: "Previous Page",
     next: "Next Page",
+    "workspaces-default": "Workspace Default",
   },
 
   // Setting Sidebar menu items.
@@ -110,6 +111,9 @@ const TRANSLATIONS = {
     },
     names: {
       description: "This will only change the display name of your workspace.",
+    },
+    default: {
+      description: "This is the default workspace",
     },
     message: {
       title: "Suggested Chat Messages",

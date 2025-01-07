@@ -6,6 +6,7 @@ import WorkspaceName from "./WorkspaceName";
 import SuggestedChatMessages from "./SuggestedChatMessages";
 import DeleteWorkspace from "./DeleteWorkspace";
 import WorkspacePfp from "./WorkspacePfp";
+import WorkspaceDefault from "./WorkspaceDefault";
 
 export default function GeneralInfo({ slug }) {
   const [workspace, setWorkspace] = useState(null);
@@ -13,15 +14,22 @@ export default function GeneralInfo({ slug }) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const formEl = useRef(null);
+  const [isWorkspaceDefault, setIsWorkspaceDefault] = useState(false);
 
   useEffect(() => {
     async function fetchWorkspace() {
       const workspace = await Workspace.bySlug(slug);
       setWorkspace(workspace);
+      setIsWorkspaceDefault(workspace.isDefault);
       setLoading(false);
     }
     fetchWorkspace();
   }, [slug]);
+
+  const handleDefaultChange = (e) => {
+    setIsWorkspaceDefault(e.target.checked);
+    setHasChanges(true);
+  };
 
   const handleUpdate = async (e) => {
     setSaving(true);
@@ -29,6 +37,8 @@ export default function GeneralInfo({ slug }) {
     const data = {};
     const form = new FormData(formEl.current);
     for (var [key, value] of form.entries()) data[key] = castToType(key, value);
+    if (data.isDefault === "yes") data.isDefault = true;
+    else data.isDefault = false;
     const { workspace: updatedWorkspace, message } = await Workspace.update(
       workspace.slug,
       data
@@ -54,6 +64,12 @@ export default function GeneralInfo({ slug }) {
           key={workspace.slug}
           workspace={workspace}
           setHasChanges={setHasChanges}
+        />
+        <WorkspaceDefault
+          key={workspace.slug}
+          isDefault={isWorkspaceDefault}
+          handleChange={handleDefaultChange}
+          saving={saving}
         />
         {hasChanges && (
           <button

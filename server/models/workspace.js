@@ -27,6 +27,7 @@ const Workspace = {
     "agentProvider",
     "agentModel",
     "queryRefusalResponse",
+    "isDefault"
   ],
   /**
    * The default Slugify module requires some additional mapping to prevent downstream issues

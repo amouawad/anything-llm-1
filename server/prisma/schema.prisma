@@ -136,6 +136,7 @@ model workspaces {
   agentProvider                String?
   agentModel                   String?
   queryRefusalResponse         String?
+  isDefault                    Boolean                        @default(false)
   workspace_users              workspace_users[]
   documents                    workspace_documents[]
   workspace_suggested_messages workspace_suggested_messages[]
