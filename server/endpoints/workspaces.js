@@ -6,7 +6,7 @@ const {
   userFromSession,
   safeJsonParse,
 } = require("../utils/http");
-const { normalizePath, isWithin } = require("../utils/files");
+const { normalizePath, isWithin, viewLocalFiles } = require("../utils/files");
 const { Workspace } = require("../models/workspace");
 const { Document } = require("../models/documents");
 const { DocumentVectors } = require("../models/vectors");
@@ -40,25 +40,66 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   try {
     const files = fs.readdirSync(dirPath);
 
-  files.forEach((file) => {
-    const filePath = path.join(dirPath, file);
+    files.forEach((file) => {
+      const filePath = path.join(dirPath, file);
 
-    if (fs.statSync(filePath).isDirectory()) {
-      // If it's a directory, recurse into it
-      getAllFiles(filePath, arrayOfFiles);
-    } else {
-      // If it's a file, push it to the array
-      arrayOfFiles.push({
-        path: filePath,
-        name: file
-      });
-    }
-  });
-  } catch(err) {
-    console.log(`[INFO] Folder not found ${dirPath}`)
+      if (fs.statSync(filePath).isDirectory()) {
+        // If it's a directory, recurse into it
+        getAllFiles(filePath, arrayOfFiles);
+      } else {
+        // If it's a file, push it to the array
+        arrayOfFiles.push({
+          path: filePath,
+          name: file,
+        });
+      }
+    });
+  } catch (err) {
+    console.log(`[INFO] Folder not found ${dirPath}`);
   }
 
   return arrayOfFiles;
+}
+
+async function autoSyncFilesToWorkspace(workspace, userId) {
+  // Get the folder path from the query parameter
+  //const folderPath = path.resolve(__dirname, 'server/storage/Test1');
+  const files = [];
+  const localFiles = await viewLocalFiles();
+  const items = localFiles.items;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.type == "file") {
+      files.push(item.name);
+    }
+    if (item.type == "folder") {
+      const folderItems = item.items;
+      for (let j = 0; j < folderItems.length; j++) {
+        const folderFiles = folderItems[j];
+        files.push(`${item.name}/${folderFiles.name}`);
+      }
+    }
+  }
+  console.log(files);
+
+  // update workspace with the files
+  // await Document.removeDocuments(
+  //   currWorkspace,
+  //   deletes,
+  //   response.locals?.user?.id
+  // );
+  const { failedToEmbed = [], errors = [] } = await Document.addDocuments(
+    workspace,
+    files,
+    userId
+  );
+  if (failedToEmbed.length > 0) {
+    console.warn(
+      `${failedToEmbed.length} documents failed to add.\n\n${errors
+        .map((msg) => `${msg}`)
+        .join("\n\n")}`
+    );
+  }
 }
 
 function workspaceEndpoints(app) {
@@ -125,6 +166,9 @@ function workspaceEndpoints(app) {
           currWorkspace.id,
           data
         );
+        if (workspace.isDefault) {
+          autoSyncFilesToWorkspace(workspace);
+        }
         response.status(200).json({ workspace, message });
       } catch (e) {
         console.error(e.message, e);
@@ -158,61 +202,78 @@ function workspaceEndpoints(app) {
           return;
         }
 
-        const folderPath = './storage/Test1';
+        const folderPath = "./storage/Test1";
         const allfiles = getAllFiles(folderPath);
-        console.log(`[INFO] ${JSON.stringify(allfiles)}`)
-        const files = allfiles.map(f => {
+        console.log(`[INFO] ${JSON.stringify(allfiles)}`);
+        const files = allfiles.map((f) => {
           return {
-            "path": f.path.replace("storage/", ""),
-          "name": f.name
-        }
-        })
+            path: f.path.replace("storage/", ""),
+            name: f.name,
+          };
+        });
         const destFolder = "/app/collector/hotdir/Test1";
-        await fs.cpSync(folderPath, destFolder, {overwrite: true, recursive: true});
+        await fs.cpSync(folderPath, destFolder, {
+          overwrite: true,
+          recursive: true,
+        });
 
         const destinationFolder = "Test1";
-        const collectDocumentsFolder = "/app/server/storage/documents/" + destinationFolder
+        const collectDocumentsFolder =
+          "/app/server/storage/documents/" + destinationFolder;
 
         const collectFiles = getAllFiles(collectDocumentsFolder);
-        const finalCollectFiles = collectFiles.map(f =>  f.path);
-        const normalizedFiles = files.map(f => {
+        const finalCollectFiles = collectFiles.map((f) => f.path);
+        const normalizedFiles = files.map((f) => {
           const targetFilename = f.path.replace(/^(\.\.(\/|\\|$))+/, "");
-          return slugify(targetFilename)
-        })
-        const finalFiles = []
+          return slugify(targetFilename);
+        });
+        const finalFiles = [];
         for (let i = 0; i < normalizedFiles.length; i++) {
           let found = false;
-          for(let j = 0; j < finalCollectFiles.length; j++) {
-            console.log(`[INFO] file check ${finalCollectFiles[j].includes(normalizedFiles[i])} ${finalCollectFiles[j]} --- ${normalizedFiles[i]}`)
+          for (let j = 0; j < finalCollectFiles.length; j++) {
+            console.log(
+              `[INFO] file check ${finalCollectFiles[j].includes(normalizedFiles[i])} ${finalCollectFiles[j]} --- ${normalizedFiles[i]}`
+            );
             if (finalCollectFiles[j].includes(normalizedFiles[i])) {
               found = true;
               break;
             }
           }
-          if(!found) {
-            finalFiles.push(files[i])
+          if (!found) {
+            finalFiles.push(files[i]);
           }
         }
-        console.log(`[INFO] collect files ${JSON.stringify(finalCollectFiles)} }`)
-        console.log(`[INFO] final files ${JSON.stringify(finalFiles)} `)
+        console.log(
+          `[INFO] collect files ${JSON.stringify(finalCollectFiles)} }`
+        );
+        console.log(`[INFO] final files ${JSON.stringify(finalFiles)} `);
 
-        let success, reason
+        let success, reason;
 
         for (let file of finalFiles) {
           const finalFile = "/app/collector/hotdir" + "/" + file.path;
           console.log(`[INFO] ${finalFile}`);
-          const res = await Collector.processDocument(finalFile, collectDocumentsFolder);
+          const res = await Collector.processDocument(
+            finalFile,
+            collectDocumentsFolder
+          );
+          console.log("finalFile", finalFile);
           success = res.success;
           reason += res.reason + " -- " + finalFile;
         }
         if (finalFiles.length == 0) {
-          success = true
+          success = true;
         }
-       success = true
+        success = true;
 
         if (!success) {
           response.status(500).json({ success: false, error: reason }).end();
           return;
+        }
+
+        const defaultWorkspaces = await Workspace.where({ isDefault: true });
+        for (let workspace of defaultWorkspaces) {
+          autoSyncFilesToWorkspace(workspace, response.locals?.user?.id);
         }
 
         Collector.log(
@@ -354,6 +415,7 @@ function workspaceEndpoints(app) {
           adds,
           response.locals?.user?.id
         );
+
         const updatedWorkspace = await Workspace.get({ id: currWorkspace.id });
         response.status(200).json({
           workspace: updatedWorkspace,

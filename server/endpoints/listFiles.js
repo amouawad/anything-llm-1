@@ -10,17 +10,23 @@ function listFilesEndpoints(app) {
     try {
       // Get the folder path from the query parameter
       //const folderPath = path.resolve(__dirname, 'server/storage/Test1');
-      const folderPath = './storage/Test1';
+      const folderPath = "./storage/Test1";
 
       // Validate folderPath if necessary to avoid security issues
       if (!folderPath) {
-        return res.status(400).json({ error: "Folder path is required ${folderPath}" });
+        return res
+          .status(400)
+          .json({ error: "Folder path is required ${folderPath}" });
       }
 
       fs.readdir(folderPath, { withFileTypes: true }, (err, files) => {
         if (err) {
-          console.error(`Error reading directory: ${err.message}  ${folderPath}`);
-          return res.status(500).json({ error: "Failed to read the directory", folderPath });
+          console.error(
+            `Error reading directory: ${err.message}  ${folderPath}`
+          );
+          return res
+            .status(500)
+            .json({ error: "Failed to read the directory", folderPath });
         }
 
         // Map and filter out directories, only include files
@@ -29,10 +35,11 @@ function listFilesEndpoints(app) {
           .map((file) => ({
             name: file.name,
             path: path.join(folderPath, file.name),
-            file,            
+            file,
           }));
+        const finalFiles = fileList.filter((file) => file.name !== ".DS_Store");
 
-        res.status(200).json(fileList);
+        res.status(200).json(finalFiles);
       });
     } catch (error) {
       console.error(`Unexpected error: ${error.message}`);
@@ -42,4 +49,3 @@ function listFilesEndpoints(app) {
 }
 
 module.exports = { listFilesEndpoints };
-

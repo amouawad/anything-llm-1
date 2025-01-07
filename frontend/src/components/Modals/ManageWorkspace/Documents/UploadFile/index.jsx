@@ -6,6 +6,7 @@ import { v4 } from "uuid";
 import FileUploadProgress from "./FileUploadProgress";
 import Workspace from "../../../../../models/workspace";
 import debounce from "lodash.debounce";
+import { API_BASE } from "@/utils/constants";
 
 export default function UploadFile({
   workspace,
@@ -46,8 +47,8 @@ export default function UploadFile({
   const uploadFilesFromFolder = async () => {
     try {
       // Use File System Access API or relevant server-side API to get files from a folder
-      
-      const response = await fetch(`/api/list-files`); // Example endpoint to fetch file list
+
+      const response = await fetch(`${API_BASE}/list-files`); // Example endpoint to fetch file list
       if (!response.ok) {
         throw new Error("Failed to fetch files from the folder Lalalaala ", response);
       }
@@ -76,9 +77,8 @@ export default function UploadFile({
       <button
         onClick={uploadFilesFromFolder}
         disabled={!ready}
-        className={`w-[560px] p-3 mb-4 text-white border-2 rounded-2xl bg-zinc-900/50 ${
-          ready ? "cursor-pointer hover:bg-zinc-900/90" : "cursor-not-allowed"
-        }`}
+        className={`w-[560px] p-3 mb-4 text-white border-2 rounded-2xl bg-zinc-900/50 ${ready ? "cursor-pointer hover:bg-zinc-900/90" : "cursor-not-allowed"
+          }`}
       >
         <CloudArrowUp className="w-8 h-8 text-white/80 inline-block mr-2" />
         {ready ? "Sync Files from Folder" : "Document Processor Unavailable"}
