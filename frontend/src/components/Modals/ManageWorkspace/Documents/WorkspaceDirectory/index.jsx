@@ -201,12 +201,14 @@ function WorkspaceDirectory({
                         ? "Deselect All"
                         : "Select All"}
                     </button>
-                    <button
-                      onClick={removeSelectedItems}
-                      className="border-none text-sm font-semibold bg-white h-[30px] px-2.5 rounded-lg hover:text-white hover:bg-neutral-800/80"
-                    >
-                      Remove Selected
-                    </button>
+                    {!workspace.isDefault && (
+                      <button
+                        onClick={removeSelectedItems}
+                        className="border-none text-sm font-semibold bg-white h-[30px] px-2.5 rounded-lg hover:text-white hover:bg-neutral-800/80"
+                      >
+                        Remove Selected
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

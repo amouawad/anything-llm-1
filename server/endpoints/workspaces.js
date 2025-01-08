@@ -167,7 +167,7 @@ function workspaceEndpoints(app) {
           data
         );
         if (workspace.isDefault) {
-          autoSyncFilesToWorkspace(workspace);
+          await autoSyncFilesToWorkspace(workspace);
         }
         response.status(200).json({ workspace, message });
       } catch (e) {
@@ -273,7 +273,7 @@ function workspaceEndpoints(app) {
 
         const defaultWorkspaces = await Workspace.where({ isDefault: true });
         for (let workspace of defaultWorkspaces) {
-          autoSyncFilesToWorkspace(workspace, response.locals?.user?.id);
+          await autoSyncFilesToWorkspace(workspace, response.locals?.user?.id);
         }
 
         Collector.log(
